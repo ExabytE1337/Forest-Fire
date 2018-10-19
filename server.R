@@ -8,11 +8,67 @@
 #
 
 library(shiny)
-  # 0...... empty -> black
-  # 1...... tree -> green
-  # 2...... burning tree -> red
-  rotate <- function(x) t(apply(x, 2, rev))
+# 0...... empty -> black
+# 1...... tree -> green
+# 2...... burning tree -> red
+rotate <- function(x) t(apply(x, 2, rev))
+withConsoleRedirect <- function(containerId, expr) {
+  # Change type="output" to type="message" to catch stderr
+  # (messages, warnings, and errors) instead of stdout.
+  txt <- capture.output(results <- expr, type = "output")
+  if (length(txt) > 0) {
+    insertUI(paste0("#", containerId), where = "beforeEnd",
+             ui = paste0(txt, "\n", collapse = "")
+    )
+  }
+  results
+}
 
+################ fire function
+Firestarter <- function(A,f,p,L,N,VonNeumann){
+    les2 <- A
+    for (i in 2:(L+1)){
+      for (j in 2:(L+1)){
+        if (A[i,j]==2){
+          les2[i,j] <- 0
+        }
+        else {
+          if (A[i,j]==0){
+            u <- runif(1)
+            if (u<=p){
+              les2[i,j] <- 1
+            }
+          }
+          else {
+            if (VonNeumann){ #vonneumann
+              if (A[i-1,j]==2 || A[i+1,j]==2 || A[i,j-1]==2 || A[i,j+1]==2){
+                les2[i,j] <- 2
+              }
+              else{
+                u <- runif(1)
+                if(u<=f){
+                  les2[i,j] <- 2
+                }
+              }
+            }
+            else{# Moore
+              if (A[i-1,j]==2 || A[i+1,j]==2 || A[i,j-1]==2 || A[i,j+1]==2 || A[i-1,j-1] || A[i-1,j+1] || A[i+1,j-1] || A[i+1,j+1]){
+                les2[i,j] <- 2
+              }
+              else{
+                u <- runif(1)
+                if(u<=p){
+                  les2[i,j] <- 2
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return(les2)
+}
+    
 # Define server logic required to draw a histogram
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
@@ -60,52 +116,9 @@ shinyServer(function(input, output, session) {
     observe({         
       maxIter <- isolate(input$N)
        isolate({
-
-         les2 <- vals$A
-      #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
-           for (i in 2:(input$L+1)){
-             for (j in 2:(input$L+1)){
-
-               if (vals$A[i,j]==2){
-                 les2[i,j] <- 0
-               }
-                else {
-                   if (vals$A[i,j]==0){
-                     u <- runif(1)
-                     if (u<=input$prob2){
-                       les2[i,j] <- 1
-                     }
-                  }
-                  else {
-                    if (input$VonNeumann){ #vonneumann
-                      if (vals$A[i-1,j]==2 || vals$A[i+1,j]==2 || vals$A[i,j-1]==2 || vals$A[i,j+1]==2){
-                        les2[i,j] <- 2
-                      }
-                      else{
-                        u <- runif(1)
-                        if(u<=input$prob1){
-                          les2[i,j] <- 2
-                        }
-                      }
-                    }
-                    else{# Moore
-                      if (vals$A[i-1,j]==2 || vals$A[i+1,j]==2 || vals$A[i,j-1]==2 || vals$A[i,j+1]==2 || vals$A[i-1,j-1] || vals$A[i-1,j+1] || vals$A[i+1,j-1] || vals$A[i+1,j+1]){
-                        les2[i,j] <- 2
-                      }
-                      else{
-                        u <- runif(1)
-                        if(u<=input$prob1){
-                          les2[i,j] <- 2
-                        }
-                      }
-                    }
-                  }
-                }
-             }
-           }
-         vals$A <-les2
+         vals$A <- Firestarter(vals$A,input$prob1,input$prob2,input$L,input$N,input$VonNeumann)
          vals$counter <- vals$counter + 1 #for loop
-         output$skuska <- renderPrint(vals$counter)
+        # output$skuska <- renderPrint(vals$counter)
          progress$inc(1/maxIter, detail = paste("Iteration number", vals$counter))
        })
        
@@ -134,55 +147,38 @@ shinyServer(function(input, output, session) {
   ######################### start2
   observeEvent(input$Start2, {#na Start MC button klik
     vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
+    trees <- NULL
+    it <- 1
+    l <- 0
+    q <- 0
+    lengthIS <- 0
+    kvantil <- qnorm(0.975)
     observe({         
       maxIter <- isolate(input$N)
       isolate({
-        for (k in 1:maxIter){
-          les2 <- vals$B
-          #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
-          for (i in 2:(input$L+1)){
-            for (j in 2:(input$L+1)){
-              
-              if (vals$B[i,j]==2){
-                les2[i,j] <- 0
-              }
-              else {
-                if (vals$B[i,j]==0){
-                  u <- runif(1)
-                  if (u<=input$prob2){
-                    les2[i,j] <- 1
-                  }
-                }
-                else {
-                  if (input$VonNeumann){ #vonneumann
-                    if (vals$B[i-1,j]==2 || vals$B[i+1,j]==2 || vals$B[i,j-1]==2 || vals$B[i,j+1]==2){
-                      les2[i,j] <- 2
-                    }
-                    else{
-                      u <- runif(1)
-                      if(u<=input$prob1){
-                        les2[i,j] <- 2
-                      }
-                    }
-                  }
-                  else{# Moore
-                    if (vals$B[i-1,j]==2 || vals$B[i+1,j]==2 || vals$B[i,j-1]==2 || vals$B[i,j+1]==2 || vals$B[i-1,j-1] || vals$B[i-1,j+1] || vals$B[i+1,j-1] || vals$B[i+1,j+1]){
-                      les2[i,j] <- 2
-                    }
-                    else{
-                      u <- runif(1)
-                      if(u<=input$prob1){
-                        les2[i,j] <- 2
-                      }
-                    }
-                  }
-                }
-              }
-            }
+        delta <- input$delta
+        burnin <- input$burnin
+        while(lengthIS > delta || it <= burnin){
+          withConsoleRedirect("console", str(cars))
+          for (k in 1:maxIter){
+            les2 <- Firestarter(vals$B,input$prob1,input$prob2,input$L,input$N,input$VonNeumann)
+            #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
+            vals$B <-les2
           }
-          vals$B <-les2
+          #message(sum(vals$B[vals$B==1]))
+          trees <- c(trees,sum(vals$B[vals$B==1]))
+          l <- l + trees[it] 
+          q <- q + trees[it]^2
+          priemer <- l / it
+          poldlzka <- kvantil * sqrt((q / it - priemer^2) / it)
+          ISd <- priemer - poldlzka
+          ISu <- priemer + poldlzka
+          lengthIS <- ISu - ISd
+          it <- it + 1
+          message(lengthIS)
         }
       })
+
     })
   })
   ######################### About
