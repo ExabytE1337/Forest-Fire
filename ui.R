@@ -6,7 +6,10 @@
 # 
 #    http://shiny.rstudio.com/
 #
-
+foo <- function() {
+  message("one")
+  message("two")
+}
 library(shiny)
 library(shinythemes)
 library(shinyjs)
@@ -68,8 +71,10 @@ shinyUI(
       
           ),
           mainPanel(width=8,
-                    plotOutput("A",width='100%',height = '600px')
+                    plotOutput("A",width='100%',height = '600px'),
+                    textOutput("skuska")
                     )
+
         )
                )),
     tabPanel("Confidence Interval",
@@ -100,10 +105,10 @@ shinyUI(
                                min = 1,
                                max = 1000,
                                value = 140),
-                   actionButton("Start2","START", width='100%'),
+                   actionButton("Start2","START MC", width='100%'),
                    br(),
                    br(),
-                   actionButton("about2","About", width='50%')
+                   actionButton("about2","About MC", width='50%')
                    
                  ),
                  mainPanel(width=8,

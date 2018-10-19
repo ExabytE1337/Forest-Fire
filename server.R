@@ -13,15 +13,14 @@ library(shiny)
   # 2...... burning tree -> red
   rotate <- function(x) t(apply(x, 2, rev))
 
-
-
-
 # Define server logic required to draw a histogram
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
-  vals <- reactiveValues( A = matrix(0,5,5),counter = 0)
+  
+  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5))
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
+  ######################### start
   observeEvent(input$Start, {progress$initialize(session, min = 0, max = 1)
   #progress <- shiny::Progress$new()
     })
@@ -41,6 +40,9 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("prob1")
     shinyjs::disable("color")
     shinyjs::disable("VonNeumann")
+    shinyjs::disable("Start2")
+    shinyjs::disable("burnin")
+    shinyjs::disable("delta")
     output$A <- renderPlot({
       par(bg = 'black')
     par(mar=c(0,0,0,0)) #zahod margins
@@ -53,10 +55,9 @@ shinyServer(function(input, output, session) {
     
     
   })
-  observeEvent(input$Start, {#na button klik
+  observeEvent(input$Start, {#na Start button klik
     
     observe({         
-
       maxIter <- isolate(input$N)
        isolate({
 
@@ -64,6 +65,7 @@ shinyServer(function(input, output, session) {
       #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
            for (i in 2:(input$L+1)){
              for (j in 2:(input$L+1)){
+
                if (vals$A[i,j]==2){
                  les2[i,j] <- 0
                }
@@ -103,6 +105,7 @@ shinyServer(function(input, output, session) {
            }
          vals$A <-les2
          vals$counter <- vals$counter + 1 #for loop
+         output$skuska <- renderPrint(vals$counter)
          progress$inc(1/maxIter, detail = paste("Iteration number", vals$counter))
        })
        
@@ -113,7 +116,6 @@ shinyServer(function(input, output, session) {
         invalidateLater(0, session)}
     })
   })
-
   observe({vals$counter
     if (vals$counter == input$N){
             shinyjs::enable("Start")
@@ -123,26 +125,98 @@ shinyServer(function(input, output, session) {
             shinyjs::enable("prob1")
             shinyjs::enable("color")
             shinyjs::enable("VonNeumann")
+            shinyjs::enable("Start2")
+            shinyjs::enable("burnin")
+            shinyjs::enable("delta")
             on.exit(progress$close())
             }
   })
-
-
+  ######################### start2
+  observeEvent(input$Start2, {#na Start MC button klik
+    vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
+    observe({         
+      maxIter <- isolate(input$N)
+      isolate({
+        for (k in 1:maxIter){
+          les2 <- vals$B
+          #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
+          for (i in 2:(input$L+1)){
+            for (j in 2:(input$L+1)){
+              
+              if (vals$B[i,j]==2){
+                les2[i,j] <- 0
+              }
+              else {
+                if (vals$B[i,j]==0){
+                  u <- runif(1)
+                  if (u<=input$prob2){
+                    les2[i,j] <- 1
+                  }
+                }
+                else {
+                  if (input$VonNeumann){ #vonneumann
+                    if (vals$B[i-1,j]==2 || vals$B[i+1,j]==2 || vals$B[i,j-1]==2 || vals$B[i,j+1]==2){
+                      les2[i,j] <- 2
+                    }
+                    else{
+                      u <- runif(1)
+                      if(u<=input$prob1){
+                        les2[i,j] <- 2
+                      }
+                    }
+                  }
+                  else{# Moore
+                    if (vals$B[i-1,j]==2 || vals$B[i+1,j]==2 || vals$B[i,j-1]==2 || vals$B[i,j+1]==2 || vals$B[i-1,j-1] || vals$B[i-1,j+1] || vals$B[i+1,j-1] || vals$B[i+1,j+1]){
+                      les2[i,j] <- 2
+                    }
+                    else{
+                      u <- runif(1)
+                      if(u<=input$prob1){
+                        les2[i,j] <- 2
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          vals$B <-les2
+        }
+      })
+    })
+  })
+  ######################### About
   observeEvent(input$about, {
     showModal(modalDialog(
-      title = "About", HTML("The shiny app was based on my project Forest Fire Simulation for 2-PMS-123.<br>
-                            Author: Jakub Kov\u00E1\u010D"),
-      br(),
-      br(),
+    title = "About",
     img(src="vonneumann.png", height = 100, width = 100),
     HTML("Von Neumann neighborhood"),
     br(),
     br(),
     img(src="moore.png", height = 100, width = 100),
     HTML("Moore neighborhood"),
-      
+    br(),
+    br(),
+    HTML("The shiny app was based on my project Forest Fire Simulation for 2-PMS-123.<br>
+                            Author: Jakub Kov\u00E1\u010D"),
       easyClose = TRUE
     ))
+  })
+  ######################### About2
+  observeEvent(input$about2, {
+    showModal(modalDialog(
+      title = "About MC", HTML("This is a Monte Carlo simulation for the confidence interval for the number of trees in a forest with parameters specified on the Simulation tab.
+      <br>Two additional parameters are needed:
+      <ul><li>Length of the burn-in phase: is needed to prevent too narrow CI's after a few iterations</li>
+      <li>Lenght of the confidence interval: stopping criteria</li></ul>"),
+                               
+      br(),
+      br(),
+      HTML("The shiny app was based on my project Forest Fire Simulation for 2-PMS-123.<br>
+                            Author: Jakub Kov\u00E1\u010D"),
+
+      easyClose = TRUE
+      ))
   })
   
 })
