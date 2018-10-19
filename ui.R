@@ -49,13 +49,13 @@ shinyUI(
                         "Number of cycles",
                         min = 10,
                         max = 500,
-                        value = 50),
+                        value = 90),
             
              sliderInput("L",
                          "Size of the forest",
                          min = 10,
                          max = 200,
-                         value = 25),
+                         value = 80),
               selectInput("color",  "Forest color",
                         c("Green/Red"= T,
                           "Gray/White"= F
@@ -71,8 +71,7 @@ shinyUI(
       
           ),
           mainPanel(width=8,
-                    plotOutput("A",width='100%',height = '600px'),
-                    textOutput("skuska")
+                    plotOutput("A",width='100%',height = '600px')
                     )
 
         )
@@ -104,16 +103,14 @@ shinyUI(
                                "Lenght of the confidence interval",
                                min = 1,
                                max = 1000,
-                               value = 140),
+                               value = 120),
                    actionButton("Start2","START MC", width='100%'),
                    br(),
                    br(),
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8,
-                           plotOutput("B",width='100%',height = '600px')
-                 )
+                 mainPanel(width=8)
                )
                     
             )
