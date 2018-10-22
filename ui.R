@@ -54,7 +54,7 @@ shinyUI(
              sliderInput("L",
                          "Size of the forest",
                          min = 10,
-                         max = 200,
+                         max = 300,
                          value = 80),
               selectInput("color",  "Forest color",
                         c("Green/Red"= T,
@@ -103,14 +103,14 @@ shinyUI(
                                "Lenght of the confidence interval",
                                min = 1,
                                max = 1000,
-                               value = 50),
+                               value = 70),
                    actionButton("Start2","START MC", width='100%'),
                    br(),
                    br(),
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8)
+                 mainPanel(width=8,textOutput("lis"))
                )
             )
     )
