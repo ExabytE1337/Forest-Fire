@@ -72,7 +72,12 @@ Firestarter <- function(A,f,p,L,N,VonNeumann){
 # Define server logic required to draw a histogram
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
-  
+  trees <- NULL
+  it <- 1
+  l <- 0
+  q <- 0
+  lengthIS <- 0
+  kvantil <- qnorm(0.975)
   vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5))
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
@@ -147,12 +152,16 @@ shinyServer(function(input, output, session) {
   ######################### start2
   observeEvent(input$Start2, {#na Start MC button klik
     vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
-    trees <- NULL
-    it <- 1
-    l <- 0
-    q <- 0
-    lengthIS <- 0
-    kvantil <- qnorm(0.975)
+    shinyjs::disable("Start")
+    shinyjs::disable("N")
+    shinyjs::disable("L")
+    shinyjs::disable("prob2")
+    shinyjs::disable("prob1")
+    shinyjs::disable("color")
+    shinyjs::disable("VonNeumann")
+    shinyjs::disable("Start2")
+    shinyjs::disable("burnin")
+    shinyjs::disable("delta")
     observe({         
       maxIter <- isolate(input$N)
       isolate({
@@ -177,9 +186,20 @@ shinyServer(function(input, output, session) {
           it <- it + 1
           message(lengthIS)
         }
+        shinyjs::enable("Start")
+        shinyjs::enable("N")
+        shinyjs::enable("L")
+        shinyjs::enable("prob2")
+        shinyjs::enable("prob1")
+        shinyjs::enable("color")
+        shinyjs::enable("VonNeumann")
+        shinyjs::enable("Start2")
+        shinyjs::enable("burnin")
+        shinyjs::enable("delta")
       })
 
     })
+   
   })
   ######################### About
   observeEvent(input$about, {

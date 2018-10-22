@@ -103,7 +103,7 @@ shinyUI(
                                "Lenght of the confidence interval",
                                min = 1,
                                max = 1000,
-                               value = 120),
+                               value = 50),
                    actionButton("Start2","START MC", width='100%'),
                    br(),
                    br(),
@@ -112,7 +112,6 @@ shinyUI(
                  ),
                  mainPanel(width=8)
                )
-                    
             )
     )
 )
