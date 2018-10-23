@@ -18,8 +18,7 @@ withConsoleRedirect <- function(containerId, expr) {
   txt <- capture.output(results <- expr, type = "output")
   if (length(txt) > 0) {
     insertUI(paste0("#", containerId), where = "beforeEnd",
-             ui = paste0(txt, "\n", collapse = "")
-    )
+             ui = paste0(txt, "\n", collapse = ""))
   }
   results
 }
@@ -161,10 +160,13 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("burnin")
     shinyjs::disable("delta")
     message("1. faza")
-    output$lis <- renderText({
-      message("2. faza")
-      paste(vals$lis)  
-    }) 
+    withConsoleRedirect("console", {
+      cat("Running Burning Forest simulation of size",input$L,"x",input$L,"and",input$N,"cycles.","\n")
+      cat("Probability of a tree getting hit by a lightning:",input$prob1,".\n")
+      cat("Probability of a tree growing:",input$prob2,".\n")
+      cat("Confidence interval length required:",input$delta,".\n")
+    })
+ 
   })
   observeEvent(input$Start2, {#na Start MC button klik 
     observe({         
@@ -197,21 +199,30 @@ shinyServer(function(input, output, session) {
           #message(paste("q = ",vals$q))
           #message(paste("priemer = ",vals$priemer))
           message(paste("lengthIS = ",lengthIS))
+          withConsoleRedirect("console", {
+            if(vals$it>2){
+              if (it>burnin) b <- NULL
+              else b <- "(B)"
+             cat("Iteration number:",vals$it-1,b,"      Confidence interval length: ",vals$lis,"\n") 
+            }
+            
+            })
           #message(paste("trees = ",vals$trees))
           #message(paste("delta= ",delta))
           #message("-----")
        # }
         #tieto veci inam
       })
-        if (isolate(vals$it) < burnin || isolate(vals$lis) > delta){
+        if (isolate(vals$it) <= burnin || isolate(vals$lis) > delta){
             message("-----")
             invalidateLater(0,session)
         }
-          
-      
-
+        else{
+          output$lis <- renderText({
+            paste("Final length of CI: ",round(vals$lis,4))
+          }) 
+        }
     })
-   
   })
   ######################### About
   observeEvent(input$about, {

@@ -6,10 +6,6 @@
 # 
 #    http://shiny.rstudio.com/
 #
-foo <- function() {
-  message("one")
-  message("two")
-}
 library(shiny)
 library(shinythemes)
 library(shinyjs)
@@ -96,8 +92,8 @@ shinyUI(
                  sidebarPanel(
                    sliderInput("burnin",
                                "Length of the burn-in phase",
-                               min = 0,
-                               max = 100,
+                               min = 2,
+                               max = 150,
                                value = 20),
                    sliderInput("delta",
                                "Lenght of the confidence interval",
@@ -110,7 +106,7 @@ shinyUI(
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8,textOutput("lis"))
+                 mainPanel(width=8,h4(textOutput("lis")),pre(id = "console"))
                )
             )
     )
