@@ -6,10 +6,6 @@
 # 
 #    http://shiny.rstudio.com/
 #
-foo <- function() {
-  message("one")
-  message("two")
-}
 library(shiny)
 library(shinythemes)
 library(shinyjs)
@@ -49,13 +45,13 @@ shinyUI(
                         "Number of cycles",
                         min = 10,
                         max = 500,
-                        value = 90),
+                        value = 30),
             
              sliderInput("L",
                          "Size of the forest",
                          min = 10,
-                         max = 200,
-                         value = 80),
+                         max = 300,
+                         value = 40),
               selectInput("color",  "Forest color",
                         c("Green/Red"= T,
                           "Gray/White"= F
@@ -96,23 +92,22 @@ shinyUI(
                  sidebarPanel(
                    sliderInput("burnin",
                                "Length of the burn-in phase",
-                               min = 0,
-                               max = 100,
+                               min = 2,
+                               max = 150,
                                value = 20),
                    sliderInput("delta",
                                "Lenght of the confidence interval",
                                min = 1,
                                max = 1000,
-                               value = 120),
+                               value = 23),
                    actionButton("Start2","START MC", width='100%'),
                    br(),
                    br(),
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8)
+                 mainPanel(width=8,h4(textOutput("lis")),pre(id = "console"))
                )
-                    
             )
     )
 )

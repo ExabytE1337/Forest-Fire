@@ -15,13 +15,12 @@ rotate <- function(x) t(apply(x, 2, rev))
 withConsoleRedirect <- function(containerId, expr) {
   # Change type="output" to type="message" to catch stderr
   # (messages, warnings, and errors) instead of stdout.
-  txt <- capture.output(results <- expr, type = "output")
-  if (length(txt) > 0) {
-    insertUI(paste0("#", containerId), where = "beforeEnd",
-             ui = paste0(txt, "\n", collapse = "")
-    )
-  }
-  results
+    txt <- capture.output(results <- expr, type = "output")
+    if (length(txt) > 0) {
+      insertUI(paste0("#", containerId), where = "beforeEnd",
+               ui = paste0(txt, "\n", collapse = ""))
+    }
+    results
 }
 
 ################ fire function
@@ -72,8 +71,8 @@ Firestarter <- function(A,f,p,L,N,VonNeumann){
 # Define server logic required to draw a histogram
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
-  
-  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5))
+  kvantil <- qnorm(0.975)
+  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
   ######################### start
@@ -101,18 +100,14 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("delta")
     output$A <- renderPlot({
       par(bg = 'black')
-    par(mar=c(0,0,0,0)) #zahod margins
+      par(mar=c(0,0,0,0)) #zahod margins
       image(vals$A[-c(1,dim(vals$A)[1]),-c(1,dim(vals$A)[2])],breaks =c(-1,0,1,2) ,col=c("black", color),xaxt='n', ann=FALSE,yaxt='n',bty="n",asp=1)
-     
       # par(mar=c(5, 4, 4, 2) + 0.1)
       #image(vals$A,xaxt='n', ann=FALSE,yaxt='n',bty="n",asp=1)
-
-    })
-    
+      })
     
   })
   observeEvent(input$Start, {#na Start button klik
-    
     observe({         
       maxIter <- isolate(input$N)
        isolate({
@@ -126,7 +121,8 @@ shinyServer(function(input, output, session) {
       if (isolate(vals$counter) < maxIter){
         #nerob ak si prekrocil iteracie
         #cat(vals$counter,"\") #progres do konzole
-        invalidateLater(0, session)}
+        invalidateLater(0, session)
+        }
     })
   })
   observe({vals$counter
@@ -146,39 +142,83 @@ shinyServer(function(input, output, session) {
   })
   ######################### start2
   observeEvent(input$Start2, {#na Start MC button klik
+    isolate({
     vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
-    trees <- NULL
-    it <- 1
-    l <- 0
-    q <- 0
-    lengthIS <- 0
-    kvantil <- qnorm(0.975)
-    observe({         
+    vals$it <- 0
+    vals$trees <- NULL
+    vals$l <- 0
+    vals$q <- 0
+    vals$poldlzka <- 0
+    vals$lis <- 0
+    })
+    #removeUI(paste0("#console"))
+    #insertUI(paste0("#console"),where = "beforeEnd",ui = paste0("", "\n", collapse = ""))
+    shinyjs::disable("Start")
+    shinyjs::disable("N")
+    shinyjs::disable("L")
+    shinyjs::disable("prob2")
+    shinyjs::disable("prob1")
+    shinyjs::disable("color")
+    shinyjs::disable("VonNeumann")
+    shinyjs::disable("Start2")
+    shinyjs::disable("burnin")
+    shinyjs::disable("delta")
+    withConsoleRedirect("console", {
+      cat("Running Burning Forest simulation of size",input$L,"x",input$L,"and",input$N,"cycles.","\n")
+      cat("Probability of a tree getting hit by a lightning:",input$prob1,".\n")
+      cat("Probability of a tree growing:",input$prob2,".\n")
+      cat("Confidence interval length required:",input$delta,".\n")
+    })
+  })
+  observeEvent(input$Start2, {#na Start MC button klik 
+    observe({   
       maxIter <- isolate(input$N)
       isolate({
         delta <- input$delta
         burnin <- input$burnin
-        while(lengthIS > delta || it <= burnin){
-          withConsoleRedirect("console", str(cars))
+       # while(lengthIS > delta || it <= burnin){
           for (k in 1:maxIter){
             les2 <- Firestarter(vals$B,input$prob1,input$prob2,input$L,input$N,input$VonNeumann)
-            #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
             vals$B <-les2
           }
-          #message(sum(vals$B[vals$B==1]))
-          trees <- c(trees,sum(vals$B[vals$B==1]))
-          l <- l + trees[it] 
-          q <- q + trees[it]^2
-          priemer <- l / it
-          poldlzka <- kvantil * sqrt((q / it - priemer^2) / it)
-          ISd <- priemer - poldlzka
-          ISu <- priemer + poldlzka
-          lengthIS <- ISu - ISd
-          it <- it + 1
-          message(lengthIS)
-        }
+          vals$trees <- c(vals$trees,sum(vals$B[vals$B==1]))
+          vals$it <- vals$it + 1
+          vals$l <- vals$l + vals$trees[vals$it] 
+          vals$q <- vals$q + vals$trees[vals$it]^2
+          vals$priemer <- vals$l / vals$it
+          vals$poldlzka <- kvantil * sqrt((vals$q / vals$it - vals$priemer^2) / vals$it)
+          vals$ISd <- vals$priemer - vals$poldlzka
+          vals$ISu <- vals$priemer + vals$poldlzka
+          lengthIS <- 2*vals$poldlzka
+          vals$lis <- lengthIS
+          withConsoleRedirect("console", {
+            if(vals$it>2){
+             cat("Iteration number:",vals$it-1,"      Confidence interval length: ",vals$lis,"\n")
+            }
+          })
       })
-
+        if (isolate(vals$it) <= burnin || isolate(vals$lis) > delta){
+            invalidateLater(0,session)
+        }
+        else{
+          isolate({
+            shinyjs::enable("Start")
+            shinyjs::enable("N")
+            shinyjs::enable("L")
+            shinyjs::enable("prob2")
+            shinyjs::enable("prob1")
+            shinyjs::enable("color")
+            shinyjs::enable("VonNeumann")
+            shinyjs::enable("Start2")
+            shinyjs::enable("burnin")
+            shinyjs::enable("delta")
+            output$lis <- renderText({
+              #paste("Final length of CI: ",round(vals$lis,4))
+              paste("Final CI: [",round(vals$ISd,2)," ; ",round(vals$ISu,2),"] with length ", round(vals$lis,2))
+            })
+          })
+           
+        }
     })
   })
   ######################### About
