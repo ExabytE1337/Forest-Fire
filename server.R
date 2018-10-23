@@ -149,6 +149,7 @@ shinyServer(function(input, output, session) {
   ######################### start2
   observeEvent(input$Start2, {#na Start MC button klik
     vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
+    continue <- TRUE
     shinyjs::disable("Start")
     shinyjs::disable("N")
     shinyjs::disable("L")
@@ -191,19 +192,20 @@ shinyServer(function(input, output, session) {
          
           message("3. faza")
           message(paste("iteracia = ",vals$it))
-          message(paste("burnin = ",burnin))
-          message(paste("l = ",vals$l))
-          message(paste("q = ",vals$q))
-          message(paste("priemer = ",vals$priemer))
+          #message(paste("burnin = ",burnin))
+          #message(paste("l = ",vals$l))
+          #message(paste("q = ",vals$q))
+          #message(paste("priemer = ",vals$priemer))
           message(paste("lengthIS = ",lengthIS))
-          message(paste("trees = ",vals$trees))
-          message(paste("delta= ",delta))
-          message("-----")
+          #message(paste("trees = ",vals$trees))
+          #message(paste("delta= ",delta))
+          #message("-----")
        # }
         #tieto veci inam
       })
-        if (vals$it < burnin || vals$lis<delta){
-          invalidateLater(0,session)
+        if (isolate(vals$it) < burnin || isolate(vals$lis) > delta){
+            message("-----")
+            invalidateLater(0,session)
         }
           
       
