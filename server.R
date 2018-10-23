@@ -15,12 +15,12 @@ rotate <- function(x) t(apply(x, 2, rev))
 withConsoleRedirect <- function(containerId, expr) {
   # Change type="output" to type="message" to catch stderr
   # (messages, warnings, and errors) instead of stdout.
-  txt <- capture.output(results <- expr, type = "output")
-  if (length(txt) > 0) {
-    insertUI(paste0("#", containerId), where = "beforeEnd",
-             ui = paste0(txt, "\n", collapse = ""))
-  }
-  results
+    txt <- capture.output(results <- expr, type = "output")
+    if (length(txt) > 0) {
+      insertUI(paste0("#", containerId), where = "beforeEnd",
+               ui = paste0(txt, "\n", collapse = ""))
+    }
+    results
 }
 
 ################ fire function
@@ -72,7 +72,7 @@ Firestarter <- function(A,f,p,L,N,VonNeumann){
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
   kvantil <- qnorm(0.975)
-  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0)
+  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
   ######################### start
@@ -87,7 +87,6 @@ shinyServer(function(input, output, session) {
     if (input$color==T) color=c("green","red")
     else color=c("#424242","white") #daj spravnu sedu
     vals$A <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
-    message("1. faza simulacie") #zbehlo raz
     #tu poviem ze na button click rob graf ak sa zmeni vals$
     shinyjs::disable("Start")
     shinyjs::disable("N")
@@ -102,7 +101,6 @@ shinyServer(function(input, output, session) {
     output$A <- renderPlot({
       par(bg = 'black')
       par(mar=c(0,0,0,0)) #zahod margins
-      message("kresliaca faza") #bezi kazdu iteraciu, asi kvoli output$A
       image(vals$A[-c(1,dim(vals$A)[1]),-c(1,dim(vals$A)[2])],breaks =c(-1,0,1,2) ,col=c("black", color),xaxt='n', ann=FALSE,yaxt='n',bty="n",asp=1)
       # par(mar=c(5, 4, 4, 2) + 0.1)
       #image(vals$A,xaxt='n', ann=FALSE,yaxt='n',bty="n",asp=1)
@@ -110,7 +108,6 @@ shinyServer(function(input, output, session) {
     
   })
   observeEvent(input$Start, {#na Start button klik
-    message("2. faza simulacie") #zbehlo raz
     observe({         
       maxIter <- isolate(input$N)
        isolate({
@@ -118,7 +115,6 @@ shinyServer(function(input, output, session) {
          vals$counter <- vals$counter + 1 #for loop
         # output$skuska <- renderPrint(vals$counter)
          progress$inc(1/maxIter, detail = paste("Iteration number", vals$counter))
-         message(paste("counter = ", vals$counter))
        })
        
       
@@ -126,7 +122,6 @@ shinyServer(function(input, output, session) {
         #nerob ak si prekrocil iteracie
         #cat(vals$counter,"\") #progres do konzole
         invalidateLater(0, session)
-        message("invalidate simulacie")
         }
     })
   })
@@ -147,8 +142,17 @@ shinyServer(function(input, output, session) {
   })
   ######################### start2
   observeEvent(input$Start2, {#na Start MC button klik
+    isolate({
     vals$B <- matrix(rep(0,(input$L + 2)^2),nrow=input$L+2,ncol=input$L+2)
-    continue <- TRUE
+    vals$it <- 0
+    vals$trees <- NULL
+    vals$l <- 0
+    vals$q <- 0
+    vals$poldlzka <- 0
+    vals$lis <- 0
+    })
+    #removeUI(paste0("#console"))
+    #insertUI(paste0("#console"),where = "beforeEnd",ui = paste0("", "\n", collapse = ""))
     shinyjs::disable("Start")
     shinyjs::disable("N")
     shinyjs::disable("L")
@@ -159,17 +163,15 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("Start2")
     shinyjs::disable("burnin")
     shinyjs::disable("delta")
-    message("1. faza")
     withConsoleRedirect("console", {
       cat("Running Burning Forest simulation of size",input$L,"x",input$L,"and",input$N,"cycles.","\n")
       cat("Probability of a tree getting hit by a lightning:",input$prob1,".\n")
       cat("Probability of a tree growing:",input$prob2,".\n")
       cat("Confidence interval length required:",input$delta,".\n")
     })
- 
   })
   observeEvent(input$Start2, {#na Start MC button klik 
-    observe({         
+    observe({   
       maxIter <- isolate(input$N)
       isolate({
         delta <- input$delta
@@ -177,50 +179,45 @@ shinyServer(function(input, output, session) {
        # while(lengthIS > delta || it <= burnin){
           for (k in 1:maxIter){
             les2 <- Firestarter(vals$B,input$prob1,input$prob2,input$L,input$N,input$VonNeumann)
-            #    #tuto velky pozor aby sa vsetko vykonalo simultanne :)
             vals$B <-les2
           }
-          #message(sum(vals$B[vals$B==1]))
           vals$trees <- c(vals$trees,sum(vals$B[vals$B==1]))
           vals$it <- vals$it + 1
           vals$l <- vals$l + vals$trees[vals$it] 
           vals$q <- vals$q + vals$trees[vals$it]^2
-         # priemer <- l / vals$it
-          vals$poldlzka <- kvantil * sqrt((vals$q / vals$it - (vals$l / vals$it)^2) / vals$it)
-         # ISd <- priemer - poldlzka
-        #  ISu <- priemer + poldlzka
+          vals$priemer <- vals$l / vals$it
+          vals$poldlzka <- kvantil * sqrt((vals$q / vals$it - vals$priemer^2) / vals$it)
+          vals$ISd <- vals$priemer - vals$poldlzka
+          vals$ISu <- vals$priemer + vals$poldlzka
           lengthIS <- 2*vals$poldlzka
           vals$lis <- lengthIS
-         
-          message("3. faza")
-          message(paste("iteracia = ",vals$it))
-          #message(paste("burnin = ",burnin))
-          #message(paste("l = ",vals$l))
-          #message(paste("q = ",vals$q))
-          #message(paste("priemer = ",vals$priemer))
-          message(paste("lengthIS = ",lengthIS))
           withConsoleRedirect("console", {
             if(vals$it>2){
-              if (it>burnin) b <- NULL
-              else b <- "(B)"
-             cat("Iteration number:",vals$it-1,b,"      Confidence interval length: ",vals$lis,"\n") 
+             cat("Iteration number:",vals$it-1,"      Confidence interval length: ",vals$lis,"\n")
             }
-            
-            })
-          #message(paste("trees = ",vals$trees))
-          #message(paste("delta= ",delta))
-          #message("-----")
-       # }
-        #tieto veci inam
+          })
       })
         if (isolate(vals$it) <= burnin || isolate(vals$lis) > delta){
-            message("-----")
             invalidateLater(0,session)
         }
         else{
-          output$lis <- renderText({
-            paste("Final length of CI: ",round(vals$lis,4))
-          }) 
+          isolate({
+            shinyjs::enable("Start")
+            shinyjs::enable("N")
+            shinyjs::enable("L")
+            shinyjs::enable("prob2")
+            shinyjs::enable("prob1")
+            shinyjs::enable("color")
+            shinyjs::enable("VonNeumann")
+            shinyjs::enable("Start2")
+            shinyjs::enable("burnin")
+            shinyjs::enable("delta")
+            output$lis <- renderText({
+              #paste("Final length of CI: ",round(vals$lis,4))
+              paste("Final CI: [",round(vals$ISd,2)," ; ",round(vals$ISu,2),"] with length ", round(vals$lis,2))
+            })
+          })
+           
         }
     })
   })
