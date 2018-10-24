@@ -106,7 +106,7 @@ shinyUI(
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8,h4(textOutput("lis")),pre(id = "console"),plotOutput("a",width='100%',height = '600px'))
+                 mainPanel(width=8,h4(textOutput("lis")),plotOutput("a",width='100%',height = '400px'))
                )
             )
     )

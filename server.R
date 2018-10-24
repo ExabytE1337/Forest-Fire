@@ -25,6 +25,23 @@ withConsoleRedirect <- function(containerId, expr) {
     results
 }
 
+theme_BW_jk <- {theme_bw() + theme(axis.line=element_line(colour = "white"),
+                     #axis.text.x=element_blank(),
+                     #axis.text.y=element_blank(),
+                     axis.ticks=element_line(colour = "white"),
+                     #axis.title.x=element_blank(),
+                     axis.title=element_text(colour = "white",size = 15),
+                     #axis.title.y=element_text(colour = "white"),
+                     #axis.title.y=element_blank(),
+                     #legend.position="none",
+                     axis.text.x = element_text(colour = "white"),
+                     axis.text.y = element_text(colour = "white"),
+                     panel.background=element_rect(fill = "black", colour = NA),
+                     panel.border = element_rect(colour = "white"), #spravi tie biele ciary hore
+                     #panel.border=element_blank(),panel.grid.major=element_blank(),
+                     #panel.grid.minor=element_blank(),
+                     plot.background=element_rect(fill = "black", colour = NA))}
+
 ################ fire function
 Firestarter <- function(A,f,p,L,N,VonNeumann){
     les2 <- A
@@ -265,12 +282,10 @@ shinyServer(function(input, output, session) {
   names(d) <- c("iteration","isl")
   head(d)
   a <- ggplot(d,aes(iteration,isl))+xlim(1,burnin2)+geom_vline(xintercept = burnin2,linetype = "dashed")
-  a <- a + geom_hline(yintercept = delta2, linetype = "dashed") + xlab("Iteration") + ylab("CI length") #+ggtitle("Progress of CI length")
-  a <- a+geom_line(size=1, col = "#2A9FD6")+geom_point(shape = 19,size = 5, col = "#2A9FD6")
-  a <- a + theme(panel.background=element_rect(fill = "transparent", colour = NA),
-            panel.border=element_blank(),panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(),plot.background=element_rect(fill = "transparent", colour = NA))
-  a<-ggdraw(a) + theme(panel.background = element_rect(fill = "#2C3E4F", colour = "#2C3E4F"))
+  a <- a + geom_hline(yintercept = delta2, linetype = "dashed") + xlab("ITERATION") + ylab("CI LENGTH") #+ggtitle("Progress of CI length")
+  a <- a+geom_line(size=2, col = "#2A9FD6")+geom_point(shape = 19,size = 7, col = "#2A9FD6")
+  a <- a + theme_BW_jk
+  a <- ggdraw(a) + theme(panel.background = element_rect(fill = "black",colour = "black"))
   print(a)
   })
   
