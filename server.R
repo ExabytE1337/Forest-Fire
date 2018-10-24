@@ -8,6 +8,8 @@
 #
 
 library(shiny)
+library(ggplot2)
+library(cowplot)
 # 0...... empty -> black
 # 1...... tree -> green
 # 2...... burning tree -> red
@@ -253,6 +255,23 @@ shinyServer(function(input, output, session) {
 
       easyClose = TRUE
       ))
+  })
+  ######################### graf LenghtIS
+  output$a <- renderPlot({
+  lis2 <- c(0,123,150,90,64,30,25)
+  burnin2 <- 20
+  delta2 <- 30
+  d <- data.frame(1:length(lis2),lis2)
+  names(d) <- c("iteration","isl")
+  head(d)
+  a <- ggplot(d,aes(iteration,isl))+xlim(1,burnin2)+geom_vline(xintercept = burnin2,linetype = "dashed")
+  a <- a + geom_hline(yintercept = delta2, linetype = "dashed") + xlab("Iteration") + ylab("CI length") #+ggtitle("Progress of CI length")
+  a <- a+geom_line(size=1, col = "#2A9FD6")+geom_point(shape = 19,size = 5, col = "#2A9FD6")
+  a <- a + theme(panel.background=element_rect(fill = "transparent", colour = NA),
+            panel.border=element_blank(),panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(),plot.background=element_rect(fill = "transparent", colour = NA))
+  a<-ggdraw(a) + theme(panel.background = element_rect(fill = "#2C3E4F", colour = "#2C3E4F"))
+  print(a)
   })
   
 })
