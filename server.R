@@ -10,6 +10,7 @@
 library(shiny)
 library(ggplot2)
 library(cowplot)
+#library(scales)
 # 0...... empty -> black
 # 1...... tree -> green
 # 2...... burning tree -> red
@@ -91,7 +92,7 @@ Firestarter <- function(A,f,p,L,N,VonNeumann){
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
   kvantil <- qnorm(0.975)
-  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
+  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),velkost = 0,d = NULL,lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
   ######################### start
@@ -169,6 +170,7 @@ shinyServer(function(input, output, session) {
     vals$q <- 0
     vals$poldlzka <- 0
     vals$lis <- 0
+    vals$d <- data.frame(iteration = numeric(),isd = numeric(),isu = numeric(),mid = numeric())
     })
     #removeUI(paste0("#console"))
     #insertUI(paste0("#console"),where = "beforeEnd",ui = paste0("", "\n", collapse = ""))
@@ -210,10 +212,29 @@ shinyServer(function(input, output, session) {
           vals$ISu <- vals$priemer + vals$poldlzka
           lengthIS <- 2*vals$poldlzka
           vals$lis <- lengthIS
-          withConsoleRedirect("console", {
-            if(vals$it>2){
-             cat("Iteration number:",vals$it-1,"      Confidence interval length: ",vals$lis,"\n")
-            }
+          output$a <- renderPlot({
+            if(vals$it>=2){
+              vals$d[vals$it-1,] <- c(vals$it,vals$ISd,vals$ISu,vals$priemer)
+              b <- ggplot(vals$d,group = 1)+geom_vline(xintercept = burnin, colour ="black")+ theme_BW_jk+ geom_ribbon(aes(ymin = isd,ymax = isu,x=iteration), alpha = 0.3, fill = "white")
+              b <- b + geom_line(aes(x=iteration,y=mid),col ="#428bca",size = 2)+ylab("Number of trees") +xlab("Iteration")
+              b <- b + geom_vline(xintercept = burnin, colour ="white",linetype = "dashed") + scale_x_continuous(breaks=scales::pretty_breaks(n=10))
+              b <- b + theme(axis.text.x = element_text(colour = "white"),axis.text.y = element_text(colour = "white"))
+              b <- ggdraw(b) + theme(panel.background = element_rect(fill = "black",colour = "black"))
+              print(b)
+              }
+              else{
+                par(bg = "black")
+                plot(1, type="n", axes=F, xlab="", ylab="",fg = "black")
+              }
+          })
+          output$lis<- renderText({
+            paste("CI: [",round(vals$ISd,2)," ; ",round(vals$ISu,2),"] with length ", round(vals$lis,2))
+          })
+          output$priemer<- renderText({
+            paste("Point estimate for the number of trees: ", round(vals$priemer,2))
+          })
+          output$it<- renderText({
+            paste("Iteration number: ", vals$it)
           })
       })
         if (isolate(vals$it) <= burnin || isolate(vals$lis) > delta){
@@ -274,19 +295,5 @@ shinyServer(function(input, output, session) {
       ))
   })
   ######################### graf LenghtIS
-  output$a <- renderPlot({
-  lis2 <- c(0,123,150,90,64,30,25)
-  burnin2 <- 20
-  delta2 <- 30
-  d <- data.frame(1:length(lis2),lis2)
-  names(d) <- c("iteration","isl")
-  head(d)
-  a <- ggplot(d,aes(iteration,isl))+xlim(1,burnin2)+geom_vline(xintercept = burnin2,linetype = "dashed")
-  a <- a + geom_hline(yintercept = delta2, linetype = "dashed") + xlab("ITERATION") + ylab("CI LENGTH") #+ggtitle("Progress of CI length")
-  a <- a+geom_line(size=2, col = "#2A9FD6")+geom_point(shape = 19,size = 7, col = "#2A9FD6")
-  a <- a + theme_BW_jk
-  a <- ggdraw(a) + theme(panel.background = element_rect(fill = "black",colour = "black"))
-  print(a)
-  })
   
 })
