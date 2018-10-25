@@ -92,7 +92,7 @@ shinyUI(
                  sidebarPanel(
                    sliderInput("burnin",
                                "Length of the burn-in phase",
-                               min = 2,
+                               min = 5,
                                max = 150,
                                value = 20),
                    sliderInput("delta",
@@ -106,7 +106,7 @@ shinyUI(
                    actionButton("about2","About MC", width='50%')
                    
                  ),
-                 mainPanel(width=8,h4(textOutput("lis")),pre(id = "console"))
+                 mainPanel(width=8,h4(textOutput("lis")),h4(textOutput("priemer")),h4(textOutput("it")),plotOutput("a",width='100%',height = '400px'))
                )
             )
     )

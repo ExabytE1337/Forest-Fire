@@ -8,6 +8,9 @@
 #
 
 library(shiny)
+library(ggplot2)
+library(cowplot)
+#library(scales)
 # 0...... empty -> black
 # 1...... tree -> green
 # 2...... burning tree -> red
@@ -22,6 +25,23 @@ withConsoleRedirect <- function(containerId, expr) {
     }
     results
 }
+
+theme_BW_jk <- {theme_bw() + theme(axis.line=element_line(colour = "white"),
+                     #axis.text.x=element_blank(),
+                     #axis.text.y=element_blank(),
+                     axis.ticks=element_line(colour = "white"),
+                     #axis.title.x=element_blank(),
+                     axis.title=element_text(colour = "white",size = 15),
+                     #axis.title.y=element_text(colour = "white"),
+                     #axis.title.y=element_blank(),
+                     #legend.position="none",
+                     axis.text.x = element_text(colour = "white"),
+                     axis.text.y = element_text(colour = "white"),
+                     panel.background=element_rect(fill = "black", colour = NA),
+                     panel.border = element_rect(colour = "white"), #spravi tie biele ciary hore
+                     #panel.border=element_blank(),panel.grid.major=element_blank(),
+                     #panel.grid.minor=element_blank(),
+                     plot.background=element_rect(fill = "black", colour = NA))}
 
 ################ fire function
 Firestarter <- function(A,f,p,L,N,VonNeumann){
@@ -72,7 +92,7 @@ Firestarter <- function(A,f,p,L,N,VonNeumann){
 #Firestarter(f,p,L,N,doplot,saveoutp,showprogress,color,VonNeumann,alone)
 shinyServer(function(input, output, session) {
   kvantil <- qnorm(0.975)
-  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
+  vals <- reactiveValues( A = matrix(0,5,5),counter = 0,B = matrix(0,5,5),velkost = 0,d = NULL,lis = 0,it=0, trees = NULL,l = 0, q= 0,poldlzka = 0,priemer = 0, ISu=0,ISd =0)
   progress <- shiny::Progress$new(session, min=0, max=1)
   progress$close()
   ######################### start
@@ -150,6 +170,7 @@ shinyServer(function(input, output, session) {
     vals$q <- 0
     vals$poldlzka <- 0
     vals$lis <- 0
+    vals$d <- data.frame(iteration = numeric(),isd = numeric(),isu = numeric(),mid = numeric())
     })
     #removeUI(paste0("#console"))
     #insertUI(paste0("#console"),where = "beforeEnd",ui = paste0("", "\n", collapse = ""))
@@ -191,10 +212,29 @@ shinyServer(function(input, output, session) {
           vals$ISu <- vals$priemer + vals$poldlzka
           lengthIS <- 2*vals$poldlzka
           vals$lis <- lengthIS
-          withConsoleRedirect("console", {
-            if(vals$it>2){
-             cat("Iteration number:",vals$it-1,"      Confidence interval length: ",vals$lis,"\n")
-            }
+          output$a <- renderPlot({
+            if(vals$it>=2){
+              vals$d[vals$it-1,] <- c(vals$it,vals$ISd,vals$ISu,vals$priemer)
+              b <- ggplot(vals$d,group = 1)+geom_vline(xintercept = burnin, colour ="black")+ theme_BW_jk+ geom_ribbon(aes(ymin = isd,ymax = isu,x=iteration), alpha = 0.3, fill = "white")
+              b <- b + geom_line(aes(x=iteration,y=mid),col ="#428bca",size = 2)+ylab("Number of trees") +xlab("Iteration")
+              b <- b + geom_vline(xintercept = burnin, colour ="white",linetype = "dashed") + scale_x_continuous(breaks=scales::pretty_breaks(n=10))
+              b <- b + theme(axis.text.x = element_text(colour = "white"),axis.text.y = element_text(colour = "white"))
+              b <- ggdraw(b) + theme(panel.background = element_rect(fill = "black",colour = "black"))
+              print(b)
+              }
+              else{
+                par(bg = "black")
+                plot(1, type="n", axes=F, xlab="", ylab="",fg = "black")
+              }
+          })
+          output$lis<- renderText({
+            paste("CI: [",round(vals$ISd,2)," ; ",round(vals$ISu,2),"] with length ", round(vals$lis,2))
+          })
+          output$priemer<- renderText({
+            paste("Point estimate for the number of trees: ", round(vals$priemer,2))
+          })
+          output$it<- renderText({
+            paste("Iteration number: ", vals$it)
           })
       })
         if (isolate(vals$it) <= burnin || isolate(vals$lis) > delta){
@@ -254,5 +294,6 @@ shinyServer(function(input, output, session) {
       easyClose = TRUE
       ))
   })
+  ######################### graf LenghtIS
   
 })
